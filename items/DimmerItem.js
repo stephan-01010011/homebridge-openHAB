@@ -50,12 +50,30 @@ DimmerItem.prototype.updateOpenHabState = function (value, type, callback, conte
         return;
     }
 
-    var command = "";
     if (type === "Power") {
-        command = value ? 'ON' : 'OFF';
+
+        // ignore the power command if already on
+        this.getOpenHabState().then( function (state, currentValue) {
+
+            let command = state ? 'ON' : 'OFF';
+
+            if (state == true && Number(currentValue) > 0) {
+                // Ignore the command because the light is already on
+                callback()
+            }else {
+
+                this.sendCommand(command, callback)
+            }
+
+        }.bind(this, value));
+
     } else {
-        command = "" + value;
+        let command = String(value);
+        this.sendCommand(command, callback)
     }
+};
+
+DimmerItem.prototype.sendCommand = function (command, callback){
 
     this.log("iOS - send message to " + this.name + ": " + command);
 
@@ -67,14 +85,14 @@ DimmerItem.prototype.updateOpenHabState = function (value, type, callback, conte
         },
         function (error, response, body) {
             if (!error && response.statusCode == 200) {
-                self.log("OpenHAB HTTP - response from " + self.name + ": " + body);
+                this.log("OpenHAB HTTP - response from " + this.name + ": " + body);
             } else {
-                self.log("OpenHAB HTTP - error from " + self.name + ": " + error);
+                this.log("OpenHAB HTTP - error from " + this.name + ": " + error);
             }
             callback();
-        }
+        }.bind(this)
     );
-};
+}
 
 
 /**
